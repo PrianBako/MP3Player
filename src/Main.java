@@ -72,8 +72,8 @@ public class Main {
                         System.out.println("Path:");
                         String Path = scanner.nextLine();
 
-
-                        Song kengERe = new Song(titulli,emriArtisti,Path);
+                        int id=0;
+                        Song kengERe = new Song(id, titulli,emriArtisti,Path);
                         kengERe.setPath(Path);
                         player.addsong(kengERe);
                         player.showplaylist();

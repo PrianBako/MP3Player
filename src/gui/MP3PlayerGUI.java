@@ -13,26 +13,19 @@ import javafx.stage.Stage;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import model.Song;
-import service.DatabaseOperations;
-import service.MP3PlayerImpl;
-import service.Mp3Player;
 import service.MySqlConnectionManager;
+import service.DatabaseOperations;
 
 import java.io.File;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.Scanner;
 
 public class MP3PlayerGUI extends Application {
-
-
-    private static ListView<String> playlistView = new ListView<>();
+    private ListView<String> playlistView = new ListView<>();
     private MediaPlayer mediaPlayer;
-    private static MySqlConnectionManager connectionManager;
-    private static DatabaseOperations dbOperations;
-    private static Mp3Player prianplayer = new MP3PlayerImpl();
-
+    private MySqlConnectionManager connectionManager;
+    private DatabaseOperations dbOperations;
+    private int currentSongId = -1;
 
     @Override
     public void start(Stage primaryStage) {
@@ -41,11 +34,9 @@ public class MP3PlayerGUI extends Application {
         );
         dbOperations = new DatabaseOperations(connectionManager);
 
-
         primaryStage.setTitle("JavaFX MP3 Player");
         playlistView.setPrefWidth(300);
 
-        // Buttons (all original methods)
         Button addButton = new Button("Add MP3");
         Button playButton = new Button("Play");
         Button nextButton = new Button("Next");
@@ -56,7 +47,6 @@ public class MP3PlayerGUI extends Application {
 
         addButton.setOnAction(e -> {
             FileChooser fileChooser = new FileChooser();
-            fileChooser.setTitle("Select MP3 Files");
             fileChooser.getExtensionFilters().add(
                     new FileChooser.ExtensionFilter("MP3 Files", "*.mp3")
             );
@@ -64,8 +54,8 @@ public class MP3PlayerGUI extends Application {
             if (selectedFiles != null) {
                 try {
                     for (File file : selectedFiles) {
-                        String[] columns = {"title", "filepath"};
-                        Object[] values = {file.getName(), file.getPath()};
+                        String[] columns = {"title", "filepath"}; // Match table
+                        Object[] values = {file.getName(), file.getAbsolutePath()};
                         dbOperations.insertRecord("songs", columns, values);
                     }
                     updatePlaylistView();
@@ -75,45 +65,75 @@ public class MP3PlayerGUI extends Application {
             }
         });
 
-        // Play selected song
         playButton.setOnAction(e -> playCurrent());
 
-        // Next song
         nextButton.setOnAction(e -> {
-            Song nextSong = prianplayer.playNext();
-            playSong(nextSong);
+            try {
+                Song nextSong = dbOperations.getNextSong(currentSongId);
+                if (nextSong != null) {
+                    currentSongId = nextSong.getId();
+                    playSong(nextSong);
+                }
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
         });
 
-        // Previous song
         backButton.setOnAction(e -> {
-            Song backSong = prianplayer.playBack();
-            playSong(backSong);
+            try {
+                Song prevSong = dbOperations.getPreviousSong(currentSongId);
+                if (prevSong != null) {
+                    currentSongId = prevSong.getId();
+                    playSong(prevSong);
+                }
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
         });
 
-        // Play first song
         playFirst.setOnAction(e -> {
-            Song firstSong = prianplayer.playFirst();
-            playSong(firstSong);
+            try {
+                Song firstSong = dbOperations.getFirstSong();
+                if (firstSong != null) {
+                    currentSongId = firstSong.getId();
+                    playSong(firstSong);
+                }
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
         });
 
-        // Play last song
         playLast.setOnAction(e -> {
-            Song lastSong = prianplayer.playLast();
-            playSong(lastSong);
+            try {
+                Song lastSong = dbOperations.getLastSong();
+                if (lastSong != null) {
+                    currentSongId = lastSong.getId();
+                    playSong(lastSong);
+                }
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
         });
 
         remove.setOnAction(e -> {
-            Song SongToRemove = prianplayer.getCurrentSong();
-            prianplayer.removesong(SongToRemove);
-            prianplayer.saveSongOnExit();
-            updatePlaylistView();
+            try {
+                String selectedSong = playlistView.getSelectionModel().getSelectedItem();
+                if (selectedSong != null) {
+                    dbOperations.deleteRecord("songs", "title = '" + selectedSong + "'");
+                    updatePlaylistView();
+                    if (mediaPlayer != null) {
+                        mediaPlayer.stop();
+                    }
+                    currentSongId = -1;
+                }
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
         });
 
-        // Bottom controls
         HBox controlBar = new HBox(10, playFirst, backButton, playButton, nextButton, playLast, addButton, remove);
         controlBar.setPadding(new Insets(10));
 
-        // Layout
         BorderPane root = new BorderPane();
         root.setCenter(playlistView);
         root.setBottom(controlBar);
@@ -121,47 +141,65 @@ public class MP3PlayerGUI extends Application {
         Scene scene = new Scene(root, 500, 400);
         primaryStage.setScene(scene);
         primaryStage.show();
+
+        updatePlaylistView();
     }
 
-    // Play the currently selected song
     private void playCurrent() {
-        Song currentSong = prianplayer.getCurrentSong();
-        playSong(currentSong);
+        String selectedSong = playlistView.getSelectionModel().getSelectedItem();
+        if (selectedSong != null) {
+            try {
+                Song song = dbOperations.getSongByName(selectedSong);
+                if (song != null) {
+                    currentSongId = song.getId();
+                    playSong(song);
+                } else {
+                    System.out.println("Song not found: " + selectedSong);
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        } else {
+            System.out.println("No song selected.");
+        }
     }
 
-    // Play a specific song
     private void playSong(Song song) {
-        if (song == null) {
-            System.out.println("No song to play.");
+        if (song == null || song.getPath() == null) {
             return;
         }
-
         if (mediaPlayer != null) {
             mediaPlayer.stop();
             mediaPlayer.dispose();
         }
-
-        File file = new File(song.getPath());
-        Media media = new Media(file.toURI().toString());
-        mediaPlayer = new MediaPlayer(media);
-        mediaPlayer.play();
-
-        // Update UI selection
-        playlistView.getSelectionModel().select(song.getEmri());
+        try {
+            File file = new File(song.getPath());
+            if (!file.exists()) {
+                return;
+            }
+            Media media = new Media(file.toURI().toString());
+            mediaPlayer = new MediaPlayer(media);
+            mediaPlayer.play();
+            playlistView.getSelectionModel().select(song.getEmri());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
-    // Update playlist view
-    private static void updatePlaylistView() {
-        ObservableList<String> names = FXCollections.observableArrayList();
-        for (Song song : prianplayer.listSongs()) {
-            names.add(song.getEmri());
+    private void updatePlaylistView() {
+        try {
+            ObservableList<String> titles = FXCollections.observableArrayList();
+            List<Song> songs = dbOperations.getAllSongs();
+            for (Song song : songs) {
+                titles.add(song.getEmri());
+            }
+            playlistView.setItems(titles);
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
-        playlistView.setItems(names);
     }
 
     public static void main(String[] args) {
         launch(args);
-        updatePlaylistView();
     }
 }
-

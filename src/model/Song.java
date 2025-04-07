@@ -14,7 +14,8 @@ public class Song extends Base implements Serializable {
         this.artist = artist;
     }
 
-    public Song(String emri, String artist, String path) {
+    public Song(int id, String emri, String artist, String path) {
+        super(id);
         this.emri=emri;
 
         this.artist=artist;
