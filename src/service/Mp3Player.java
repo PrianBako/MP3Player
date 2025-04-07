@@ -6,7 +6,7 @@ import java.util.List;
 public interface Mp3Player {
 
     void addsong(Song a);
-    void removesong(int a);
+    void removesong(Song a);
     void showplaylist();
     Song playNext();
     void stopSong();
@@ -20,5 +20,7 @@ public interface Mp3Player {
 
     void loadSong();
     void saveSongOnExit();
+
+    Song playBack();
 
 }

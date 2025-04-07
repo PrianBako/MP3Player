@@ -9,12 +9,12 @@ import java.util.Set;
 
 public class MP3PlayerImpl implements Mp3Player{
     public static final String Mp3Info= "Ky eshte nje Mp3 player Spotify";
-    private static JMFAudioPlayer audioPlayer = new JMFAudioPlayer();
     private final ListStorage objectStorage = new ListStorage();
 
     private static List<Song> songs = new ArrayList<>();
     private static Set<String> artists = new HashSet<>();
     private static int current= 0;
+
 
 
     @Override
@@ -25,7 +25,7 @@ public class MP3PlayerImpl implements Mp3Player{
     }
 
     @Override
-    public void removesong(int a) {
+    public void removesong(Song a) {
         songs.remove(a);
 
     }
@@ -44,7 +44,6 @@ public class MP3PlayerImpl implements Mp3Player{
         if(current >= songs.size()) {
             current = 0;
         }
-        audioPlayer.playSong(songs.get(current));
         return songs.get(current);
     }
 
@@ -104,6 +103,16 @@ public class MP3PlayerImpl implements Mp3Player{
     public void saveSongOnExit() {
         ListStorage.storeList("mp3.data",songs);
 
+    }
+
+    @Override
+    public Song playBack() {
+        current=current-1;
+
+        if(current < 0) {
+            current = songs.size()-1;
+        }
+        return songs.get(current);
     }
 
 

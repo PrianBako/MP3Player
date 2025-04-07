@@ -3,15 +3,25 @@ package model;
 import java.io.Serializable;
 import java.util.Objects;
 
-public class Song implements Serializable {
+public class Song extends Base implements Serializable {
     private String emri;
     private String artist;
     private String path;
 
-    public Song(String e, String a) {
-        emri=e;
-        artist=a;
+    public Song(int id, String emri, String artist) {
+        super(id);
+        this.emri = emri;
+        this.artist = artist;
     }
+
+    public Song(String emri, String artist, String path) {
+        this.emri=emri;
+
+        this.artist=artist;
+        this.path= path;
+    }
+
+
 
     public String getArtist() {
         return artist;

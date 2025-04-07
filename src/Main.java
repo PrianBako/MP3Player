@@ -26,6 +26,7 @@ public class Main {
 
 
         public static void main(String[] args) {
+
             player.loadSong();
             Scanner scanner = new Scanner(System.in);
 
@@ -72,7 +73,7 @@ public class Main {
                         String Path = scanner.nextLine();
 
 
-                        Song kengERe = new Song(titulli,emriArtisti);
+                        Song kengERe = new Song(titulli,emriArtisti,Path);
                         kengERe.setPath(Path);
                         player.addsong(kengERe);
                         player.showplaylist();
@@ -84,7 +85,7 @@ public class Main {
                         player.showplaylist();
                         System.out.println("Zgjidhni numrin e kenges qe deshironi te hiqni");
                         int hiq = scanner.nextInt();
-                        player.removesong(hiq-1);
+                        player.removesong(player.getCurrentSong());
                         player.showplaylist();
                         break;
 
